@@ -37,6 +37,9 @@ export const cuentasService = {
         }
     },
 
+    //Add a new card to an account
+    // This function creates a new card and adds it to the specified account
+    //TODO: este metodo debería ser parte del servicio de tarjetas, no de cuentas
     addCardToAccount: async (accountId, newCard) => {
         try {
             const { data } = await walletApi.post(`/tarjetas/crear/${accountId}`, newCard);
@@ -46,6 +49,7 @@ export const cuentasService = {
         }
     },
 
+    //TODO: este metodo debería ser parte del servicio de tarjetas, no de cuentas
     deleteCardFromAccount: async (cardId) => {
         try {
             await walletApi.patch(`/tarjetas/eliminar/${parseInt(cardId)}`);
@@ -54,6 +58,7 @@ export const cuentasService = {
         }
     },
 
+    //TODO: este metodo debería ser parte del servicio de tarjetas, no de cuentas
     addTransactionToCardService: async (tarjetaId, transferencia) => {
         try {
             const { data } = await walletApi.post(`/transferencias/tarjeta/${tarjetaId}`, transferencia);

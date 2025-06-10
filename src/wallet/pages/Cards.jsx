@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState } from 'react';
 import { FaCcMastercard, FaCcVisa, FaCreditCard } from 'react-icons/fa';
 import { MdDeleteForever } from "react-icons/md";
@@ -5,17 +6,39 @@ import Swal from 'sweetalert2';
 import { AddCardForm } from '../components/AddCardForm';
 import { Modal } from '../components/Modal';
 import { useAccountStore } from '../hooks/useAccountStore';
+import { useCardStore } from '../hooks/useCardStore';
+import { useEffect } from 'react';
+import { useAuthStore } from '../../hooks';
 
 export const Cards = () => {
 
-  const { accounts, addCardToAccountFn, deleteCardFromAccount } = useAccountStore();
+  const { user } = useAuthStore();
 
-  const tarjetas = accounts
-    .flatMap(account => account.tarjetasDto
-      .filter(t => t.estado === true) || []);
+  const {
+    accounts,
+    addCardToAccountFn,
+    deleteCardFromAccount
+  } = useAccountStore();
+
+  const {
+    cards,
+    isLoading,
+    activeCard,
+    addCardToAccount,
+    deleteCard,
+    startLoadingAccountsCards
+  } = useCardStore();
+
+  // const tarjetas = accounts
+  //   .flatMap(account => account.tarjetasDto
+  //     .filter(t => t.estado === true) || []);
 
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    startLoadingAccountsCards(user.id);
+  }, [user.id]);
 
   const getCardStyles = (tipo) => {
     switch (tipo) {
@@ -106,9 +129,11 @@ export const Cards = () => {
     }
   };
 
+  console.log("Tarjetas cargadas:", cards);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-visible">
-      {tarjetas.map((tarjeta, idx) => (
+      {cards.map((tarjeta, idx) => (
         <div
           key={idx}
           className={`${getCardStyles(tarjeta.marca)} text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-[1.03] duration-200 relative group`} // AGREGAR: 'relative' para posicionar el botón de eliminar

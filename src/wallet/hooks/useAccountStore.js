@@ -61,6 +61,7 @@ export const useAccountStore = () => {
 
     };
 
+    //TODO: este metodo debería ser parte del servicio de tarjetas, no de cuentas
     const addCardToAccountFn = async (accountId, newCard) => {
         try {
             // Primero, hacer la llamada a la API para crear la tarjeta
@@ -74,6 +75,7 @@ export const useAccountStore = () => {
         }
     };
 
+    //TODO: este metodo debería ser parte del servicio de tarjetas, no de cuentas
     const deleteCardFromAccount = async (cardId) => {
         try {
             await cuentasService.deleteCardFromAccount(cardId);
@@ -87,6 +89,7 @@ export const useAccountStore = () => {
         }
     };
 
+    //TODO: este metodo debería ser parte del servicio de transacciones, no de cuentas
     const addTransactionToCardFn = async (tarjetaId, transferencia) => {
         try {
             const data = await cuentasService.addTransactionToCardService(tarjetaId, transferencia);
