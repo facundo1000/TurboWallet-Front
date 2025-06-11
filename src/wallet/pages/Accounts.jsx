@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Swal from "sweetalert2";
 import { useAuthStore } from "../../hooks";
 import { AccountsTable, EditAccountModal } from "../components";
 import { useAccountStore } from "../hooks/useAccountStore";
-import Swal from "sweetalert2";
 
 export const Accounts = () => {
     const [showModal, setShowModal] = useState(false);
@@ -10,7 +10,6 @@ export const Accounts = () => {
     const {
         accounts,
         isLoading,
-        startLoadingUserAccounts,
         activeAccount,
         selectActiveAccount,
         deleteActiveAccount
@@ -18,10 +17,6 @@ export const Accounts = () => {
 
     const { user } = useAuthStore();
 
-
-    useEffect(() => {
-        startLoadingUserAccounts(user.id);
-    }, [user.id]);
 
     const handleEditAccount = (account) => {
         selectActiveAccount(account);

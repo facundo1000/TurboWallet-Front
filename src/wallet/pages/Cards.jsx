@@ -1,32 +1,24 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { FaCcMastercard, FaCcVisa, FaCreditCard } from 'react-icons/fa';
 import { MdDeleteForever } from "react-icons/md";
 import Swal from 'sweetalert2';
-import { useAuthStore } from '../../hooks';
 import { AddCardForm } from '../components/AddCardForm';
 import { Modal } from '../components/Modal';
 import { useCardStore } from '../hooks/useCardStore';
 
 export const Cards = () => {
-
-  const { user } = useAuthStore();
-
+  // Obtener las tarjetas y funciones del store
   const {
     cards,
     isLoading,
     activeCard,
     addCardToAccount,
     deleteCard,
-    startLoadingAccountsCards
   } = useCardStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-
-  useEffect(() => {
-    startLoadingAccountsCards(user.id);
-  }, [user.id]);
 
   const getCardStyles = (tipo) => {
     switch (tipo) {
