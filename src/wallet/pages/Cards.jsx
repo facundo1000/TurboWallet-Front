@@ -1,24 +1,16 @@
 /* eslint-disable no-unused-vars */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaCcMastercard, FaCcVisa, FaCreditCard } from 'react-icons/fa';
 import { MdDeleteForever } from "react-icons/md";
 import Swal from 'sweetalert2';
+import { useAuthStore } from '../../hooks';
 import { AddCardForm } from '../components/AddCardForm';
 import { Modal } from '../components/Modal';
-import { useAccountStore } from '../hooks/useAccountStore';
 import { useCardStore } from '../hooks/useCardStore';
-import { useEffect } from 'react';
-import { useAuthStore } from '../../hooks';
 
 export const Cards = () => {
 
   const { user } = useAuthStore();
-
-  const {
-    accounts,
-    addCardToAccountFn,
-    deleteCardFromAccount
-  } = useAccountStore();
 
   const {
     cards,
@@ -29,12 +21,8 @@ export const Cards = () => {
     startLoadingAccountsCards
   } = useCardStore();
 
-  // const tarjetas = accounts
-  //   .flatMap(account => account.tarjetasDto
-  //     .filter(t => t.estado === true) || []);
-
-
   const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   useEffect(() => {
     startLoadingAccountsCards(user.id);
@@ -93,7 +81,7 @@ export const Cards = () => {
       });
 
       if (result.isConfirmed) {
-        await deleteCardFromAccount(tarjeta.idTarjeta);
+        await deleteCard(tarjeta.idTarjeta);
         Swal.fire('Eliminada', 'La tarjeta ha sido eliminada.', 'success');
       }
     } catch (error) {
@@ -121,7 +109,8 @@ export const Cards = () => {
         fechaVencimiento,
       };
 
-      await addCardToAccountFn(accountId, newCard);
+      // await addCardToAccountFn(accountId, newCard);
+      await addCardToAccount(accountId, newCard); // Actualizar el estado local
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error al agregar tarjeta:", error);
@@ -129,7 +118,6 @@ export const Cards = () => {
     }
   };
 
-  console.log("Tarjetas cargadas:", cards);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-visible">

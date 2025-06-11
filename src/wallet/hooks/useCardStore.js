@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { cuentasService } from '../../services';
+import { CardService, cuentasService } from '../../services';
 import { addCard, removeCard, setCards, setErrorCard } from '../../store/wallet/CardSlice';
 
 export const useCardStore = () => {
@@ -11,9 +11,11 @@ export const useCardStore = () => {
     // Function to set the loading state
     const startLoadingAccountsCards = async (userId) => {
         try {
+
             const data = await cuentasService.getAllActiveAccountsOfActiveUser(userId);
-            const tarjetas = data.flatMap(account => account.tarjetasDto.filter(t => t.estado === true) || []);
-            dispatch(setCards(tarjetas));
+            const cards = data.flatMap(account => account.tarjetasDto.filter(t => t.estado === true) || []);
+            dispatch(setCards(cards));
+            return data;
         } catch (err) {
             dispatch(setErrorCard(err.message));
         }
@@ -21,7 +23,7 @@ export const useCardStore = () => {
 
     const addCardToAccount = async (accountId, cardData) => {
         try {
-            const newCard = await cuentasService.addCardToAccount(accountId, cardData);
+            const newCard = await CardService.addCardToAccount(accountId, cardData);
             dispatch(addCard({ ...newCard, accountId }));
             return newCard;
         } catch (error) {
@@ -32,7 +34,7 @@ export const useCardStore = () => {
 
     const deleteCard = async (cardId) => {
         try {
-            await cuentasService.deleteCardFromAccount(cardId);
+            await CardService.deleteCardFromAccount(cardId);
             dispatch(removeCard(cardId));
             return true;
         } catch (error) {
