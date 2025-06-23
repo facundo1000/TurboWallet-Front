@@ -1,27 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { useAccountStore } from '../hooks/useAccountStore';
+import { useEffect, useState } from 'react';
 import {
-    IoSwapHorizontalSharp,
     IoArrowForward,
     IoCheckmarkCircle,
+    IoSwapHorizontalSharp,
     IoWarning
 } from 'react-icons/io5';
+import { useAccountStore } from '../hooks/useAccountStore';
+import { useTransactionStore } from '../hooks/useTransactionStore';
+
+
+const INITIAL_TRANSFER_STATE = {
+    tipoTransferencia: 'TRANSFERENCIA',
+    motivo: '',
+    nombreDestinatario: '',
+    bancoDestino: '',
+    cbuAlias: '',
+    cuentaOrigen: '',
+    monto: '',
+    estado: true
+};
+
 
 const Transfer = () => {
 
-    const { accounts, addTransactionToCard } = useAccountStore() // Asumiendo que tienes un hook para obtener las cuentas
-
-    const [transferDetails, setTransferDetails] = useState({
-        tipoTransferencia: 'TRANSFERENCIA',
-        motivo: '',
-        nombreDestinatario: '',
-        bancoDestino: '',
-        cbuAlias: '',
-        cuentaOrigen: '',
-        estado: true
-    });
+    // Asumiendo que tienes un hook para obtener las cuentas
+    const { accounts } = useAccountStore();
+    const { createTransaction } = useTransactionStore();
     const [localMessage, setLocalMessage] = useState(null);
-    const [isSending, setIsSending] = useState(false);
+    const [isSending] = useState(false);
+    const [transferDetails, setTransferDetails] = useState(INITIAL_TRANSFER_STATE);
 
 
     // Filtrar solo cuentas activas
@@ -31,7 +38,7 @@ const Transfer = () => {
     const selectedAccount = activeAccounts.find(acc => acc.idCuenta === transferDetails.cuentaOrigen);
 
     // Determinar el saldo disponible
-    const availableBalance = selectedAccount ? parseFloat(selectedAccount.saldo) || 0 : 0;
+    const availableBalance = selectedAccount ? selectedAccount.saldo : 0;
 
     useEffect(() => {
         if (localMessage) {
@@ -43,89 +50,43 @@ const Transfer = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setLocalMessage(null);
-        setTransferDetails({
-            ...transferDetails,
+        setTransferDetails(prev => ({
+            ...prev,
             [name]: value
-        });
+        }));
     };
 
     const handleSubmitTransfer = async (e) => {
         e.preventDefault();
-        setIsSending(true);
         setLocalMessage(null);
 
-        // Desestructurar para validaciones
-        const {
-            cuentaOrigen,
-            cbuAlias,
-            monto,
-            motivo,
-            nombreDestinatario,
-            bancoDestino
-        } = transferDetails;
-
-        // Validaciones
-        if (!cuentaOrigen || !cbuAlias || !monto || !motivo || !nombreDestinatario || !bancoDestino) {
-            setLocalMessage({ type: 'error', text: 'Todos los campos son obligatorios.' });
-            setIsSending(false);
-            return;
-        }
-
-        const numericAmount = parseFloat(monto);
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-            setLocalMessage({ type: 'error', text: 'El monto debe ser un número positivo.' });
-            setIsSending(false);
-            return;
-        }
-
-        if (numericAmount > availableBalance) {
-            setLocalMessage({
-                type: 'error',
-                text: `Saldo insuficiente. Tienes $${availableBalance.toFixed(2)} disponibles.`
-            });
-            setIsSending(false);
-            return;
-        }
-
-        // Preparar el objeto para enviar al backend
+        // Preparar datos para el backend
         const transferData = {
             tipoTransferencia: transferDetails.tipoTransferencia,
             motivo: transferDetails.motivo,
             nombreDestinatario: transferDetails.nombreDestinatario,
             bancoDestino: transferDetails.bancoDestino,
-            cuentaDestinatario: transferDetails.cbuAlias, // El CBU/Alias ingresado
-            cuentaOrigen: transferDetails.cuentaOrigen, // ID de la cuenta seleccionada
-            monto: numericAmount, // Convertir a número
+            cuentaDestinatario: transferDetails.cbuAlias,
+            cuentaOrigen: transferDetails.cuentaOrigen,
+            monto: parseFloat(transferDetails.monto),
             estado: true
         };
 
-        console.log('Datos de transferencia:', transferData);
-
         try {
-            // Obtener la primera tarjeta asociada a la cuenta (o null si no hay)
-            const account = accounts.find(acc => acc.idCuenta === transferDetails.cuentaOrigen);
+            // Obtener la primera tarjeta asociada a la cuenta
+            const account = activeAccounts.find(acc => acc.idCuenta === parseInt(transferDetails.cuentaOrigen));
             const tarjeta = account?.tarjetasDto?.[0];
 
             if (!tarjeta) {
                 throw new Error("No hay tarjetas disponibles para esta cuenta");
             }
 
-            // Usar addTransactionToCard con el ID de la tarjeta y los datos de transferencia
-            await addTransactionToCard(tarjeta.idTarjeta, transferData);
+            await createTransaction(tarjeta.idTarjeta, transferData);
 
             setLocalMessage({ type: 'success', text: '¡Transferencia realizada con éxito!' });
 
             // Limpiar el formulario
-            setTransferDetails({
-                tipoTransferencia: 'debito',
-                motivo: '',
-                nombreDestinatario: '',
-                bancoDestino: '',
-                cbuAlias: '',
-                cuentaOrigen: '',
-                monto: '',
-                estado: true
-            });
+            setTransferDetails(INITIAL_TRANSFER_STATE);
 
         } catch (error) {
             console.error('Error al realizar la transferencia:', error);
@@ -133,8 +94,6 @@ const Transfer = () => {
                 type: 'error',
                 text: 'Error al realizar la transferencia: ' + (error.message || 'Inténtalo de nuevo')
             });
-        } finally {
-            setIsSending(false);
         }
     };
 
@@ -280,7 +239,7 @@ const Transfer = () => {
                             Monto a Transferir
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             id="monto"
                             name="monto"
                             value={transferDetails.monto}

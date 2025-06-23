@@ -28,6 +28,16 @@ export const TransactionSlice = createSlice({
                 state.transactions[index] = action.payload;
             }
         },
+        setLoadingTransactions: (state, action) => {
+            state.isLoading = action.payload;
+        },
+        setErrorTransaction: (state, action) => {
+            state.isLoading = false;
+            state.error = action.payload;
+        },
+        clearError: (state) => {
+            state.error = null;
+        }
         // setFilters: (state, action) => {
         //     state.filters = { ...state.filters, ...action.payload };
         // }
@@ -39,5 +49,8 @@ export const TransactionSlice = createSlice({
 export const {
     setTransactions,
     addTransaction,
-    updateTransaction
+    updateTransaction,
+    setErrorTransaction,
+    setLoadingTransactions,
+    clearError
 } = TransactionSlice.actions;
