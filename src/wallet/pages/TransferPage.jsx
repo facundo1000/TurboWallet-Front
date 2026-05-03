@@ -1,7 +1,7 @@
-import Transfer from "../components/Transfer";
+import { Transfer } from "../components/Transfer";
 
 export const TransferPage = () => {
-     return (
+  return (
     <div className="py-8">
       <Transfer />
     </div>

@@ -1,13 +1,21 @@
 // src/wallet/pages/EditProfilePage.jsx
-import React, { useState } from 'react';
-import { FaUserEdit } from 'react-icons/fa';
+import { useState } from 'react';
 
 // Importa los nuevos componentes
-import { EditProfileForm } from './EditProfileForm';
+import { useAuthStore } from '../../hooks/useAuthStore';
 import { ChangePasswordForm } from './ChangePassword';
+import { EditProfileForm } from './EditProfileForm';
 
 const EditProfile = () => {
-    // Estado para los datos personales del usuario
+
+    const { user } = useAuthStore();
+
+    //TODO: Reemplazar con datos del usuario autenticado.
+    // Se debe crear un hook para obtener el usuario autenticado y sus datos.
+    // Y Se debe crear el estado para manejar los datos del usuario.
+
+
+    // Personal data state
     const [userData, setUserData] = useState({
         name: 'Manuel',
         lastName: 'García',
@@ -15,7 +23,7 @@ const EditProfile = () => {
     });
 
     const [formValues, setFormValues] = useState(userData);
-    const [message, setMessage] = useState(''); // Mensaje para el formulario de perfil
+    const [message, setMessage] = useState(''); // Profile update message
 
     // Estado para el cambio de contraseña
     const [passwordFields, setPasswordFields] = useState({
@@ -88,7 +96,8 @@ const EditProfile = () => {
 
     return (
         <div className="flex justify-center items-start min-h-[calc(100vh-80px)] py-8 px-4">
-            <div className="bg-[#2D3748] text-white p-8 rounded-xl shadow-lg w-full max-w-5xl flex flex-col md:flex-row gap-8 items-end"> {/* Flex para columnas, md:flex-row para que sean columnas en desktop */}
+            <div className="bg-[#2D3748] text-white p-8 rounded-xl shadow-lg w-full max-w-5xl flex flex-col md:flex-row gap-8 items-end">
+                {/* Flex para columnas, md:flex-row para que sean columnas en desktop */}
                 {/* Columna Izquierda: Datos Personales */}
                 <div className="w-full md:w-1/2 flex flex-col justify-between"> {/* Ocupa la mitad en desktop, completo en mobile */}
                     <EditProfileForm

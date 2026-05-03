@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { FaSave } from 'react-icons/fa';
 
 export const EditProfileForm = ({ formValues, handleInputChange, handleSubmitProfile, message }) => {

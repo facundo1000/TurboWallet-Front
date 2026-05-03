@@ -1,5 +1,4 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { add } from 'date-fns';
 
 const initialState = {
     accounts: [],        // Todas las cuentas del usuario

@@ -1,4 +1,4 @@
-import { walletApi } from "../api/walletApi";
+import walletApi from "../api/walletApi";
 
 export const usuariosService = {
 

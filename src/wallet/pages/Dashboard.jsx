@@ -1,9 +1,11 @@
-import React, { useState } from 'react'; // Importar useState aquí
 import { CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js';
+import { useEffect, useState } from 'react'; // Importar useState aquí
 import { Line } from 'react-chartjs-2';
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Importar los iconos de ojo
+import { useAuthStore } from '../../hooks';
 import CurrencyConverter from '../components/CurrencyConverter';
 import { useAccountStore } from '../hooks/useAccountStore';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Importar los iconos de ojo
+import { useCardStore } from '../hooks/useCardStore';
 
 ChartJS.register(
     CategoryScale,
@@ -17,7 +19,19 @@ ChartJS.register(
 );
 
 export const Dashboard = () => {
-    const [mostrarSaldo, setMostrarSaldo] = useState(true); // Nuevo estado para controlar la visibilidad del saldo
+    // Nuevo estado para controlar la visibilidad del saldo
+    const [mostrarSaldo, setMostrarSaldo] = useState(true);
+
+    const { user } = useAuthStore();
+    const { accounts, startLoadingUserAccounts } = useAccountStore();
+    const { startLoadingAccountsCards } = useCardStore();
+
+    // Load user accounts and cards when the component mounts or when user.id changes
+    useEffect(() => {
+        startLoadingUserAccounts(user.id);
+        startLoadingAccountsCards(user.id);
+    }, [user.id]);
+
 
     const chartData = {
         labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
@@ -108,7 +122,6 @@ export const Dashboard = () => {
         },
     };
 
-    const { accounts } = useAccountStore();
 
     // Calcula el saldo total de las cuentas en ARS
     const saldoARS = accounts.reduce((total, account) => {
@@ -220,7 +233,7 @@ export const Dashboard = () => {
                 </div>
             </div>
             {/* 3. Mosaico Últimos Movimientos */}
-            <div className="bg-[#2D3748] backdrop-blur-md rounded-2xl p-6 border border-gray-700 shadow-md hover:shadow-lg transition-all hover:scale-99 transition-transform duration-200">
+            <div className="bg-[#2D3748] backdrop-blur-md rounded-2xl p-6 border border-gray-700 shadow-md hover:shadow-lg hover:scale-99 transition-transform duration-200">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white">Últimos movimientos</h3>
                     <svg

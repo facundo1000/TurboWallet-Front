@@ -1,27 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { useAccountStore } from '../hooks/useAccountStore';
+import { useEffect, useState } from 'react';
 import {
-    IoSwapHorizontalSharp,
     IoArrowForward,
+    IoCard,
     IoCheckmarkCircle,
+    IoSwapHorizontalSharp,
     IoWarning
 } from 'react-icons/io5';
+import { useAccountStore } from '../hooks/useAccountStore';
+import { useTransactionStore } from '../hooks/useTransactionStore';
 
-const Transfer = () => {
 
-    const { accounts, addTransactionToCard } = useAccountStore() // Asumiendo que tienes un hook para obtener las cuentas
+const INITIAL_TRANSFER_STATE = {
+    tipoTransferencia: 'TRANSFERENCIA',
+    motivo: '',
+    nombreDestinatario: '',
+    bancoDestino: '',
+    cbuAlias: '',
+    cuentaOrigen: '',
+    monto: '',
+    estado: true
+};
 
-    const [transferDetails, setTransferDetails] = useState({
-        tipoTransferencia: 'TRANSFERENCIA',
-        motivo: '',
-        nombreDestinatario: '',
-        bancoDestino: '',
-        cbuAlias: '',
-        cuentaOrigen: '',
-        estado: true
-    });
+
+export const Transfer = () => {
+
+    // Asumiendo que tienes un hook para obtener las cuentas
+    const { accounts } = useAccountStore();
+    const { createTransaction, isLoading } = useTransactionStore();
     const [localMessage, setLocalMessage] = useState(null);
-    const [isSending, setIsSending] = useState(false);
+    // const [isSending] = useState(false);
+    const [transferDetails, setTransferDetails] = useState(INITIAL_TRANSFER_STATE);
 
 
     // Filtrar solo cuentas activas
@@ -33,6 +41,12 @@ const Transfer = () => {
     // Determinar el saldo disponible
     const availableBalance = selectedAccount ? parseFloat(selectedAccount.saldo) || 0 : 0;
 
+    // Obtener tarjetas de la cuenta seleccionada
+    const availableCards = selectedAccount?.tarjetasDto?.filter(card => card.estado !== false) || [];
+
+    // Verificar si se puede realizar la transferencia
+    const canTransfer = selectedAccount && availableCards.length > 0 && transferDetails.tarjetaOrigen;
+
     useEffect(() => {
         if (localMessage) {
             const timer = setTimeout(() => setLocalMessage(null), 5000);
@@ -40,23 +54,29 @@ const Transfer = () => {
         }
     }, [localMessage]);
 
+    // Resetear tarjeta cuando cambia la cuenta
+    useEffect(() => {
+        if (transferDetails.cuentaOrigen) {
+            setTransferDetails(prev => ({
+                ...prev,
+                tarjetaOrigen: ''
+            }));
+        }
+    }, [transferDetails.cuentaOrigen]);
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setLocalMessage(null);
-        setTransferDetails({
-            ...transferDetails,
-            [name]: value
-        });
+        setTransferDetails(prev => ({
+            ...prev,
+            [name]: name === 'cuentaOrigen' ? parseInt(value) || '' : value
+        }));
     };
 
-    const handleSubmitTransfer = async (e) => {
-        e.preventDefault();
-        setIsSending(true);
-        setLocalMessage(null);
-
-        // Desestructurar para validaciones
+    const validateForm = () => {
         const {
             cuentaOrigen,
+            tarjetaOrigen,
             cbuAlias,
             monto,
             motivo,
@@ -64,68 +84,74 @@ const Transfer = () => {
             bancoDestino
         } = transferDetails;
 
-        // Validaciones
-        if (!cuentaOrigen || !cbuAlias || !monto || !motivo || !nombreDestinatario || !bancoDestino) {
-            setLocalMessage({ type: 'error', text: 'Todos los campos son obligatorios.' });
-            setIsSending(false);
-            return;
+        if (!cuentaOrigen) {
+            return 'Debes seleccionar una cuenta de origen.';
+        }
+
+        if (!tarjetaOrigen) {
+            return 'Debes seleccionar una tarjeta para realizar la transferencia.';
+        }
+
+        if (!nombreDestinatario || !bancoDestino || !cbuAlias || !motivo) {
+            return 'Todos los campos del destinatario son obligatorios.';
+        }
+
+        if (!monto) {
+            return 'Debes ingresar un monto.';
         }
 
         const numericAmount = parseFloat(monto);
         if (isNaN(numericAmount) || numericAmount <= 0) {
-            setLocalMessage({ type: 'error', text: 'El monto debe ser un número positivo.' });
-            setIsSending(false);
-            return;
+            return 'El monto debe ser un número positivo.';
         }
 
         if (numericAmount > availableBalance) {
-            setLocalMessage({
-                type: 'error',
-                text: `Saldo insuficiente. Tienes $${availableBalance.toFixed(2)} disponibles.`
-            });
-            setIsSending(false);
+            return `Saldo insuficiente. Tienes $${availableBalance.toFixed(2)} disponibles.`;
+        }
+
+        return null;
+    };
+
+    const handleSubmitTransfer = async (e) => {
+        e.preventDefault();
+        setLocalMessage(null);
+
+        // Validar formulario
+        const validationError = validateForm();
+        if (validationError) {
+            setLocalMessage({ type: 'error', text: validationError });
             return;
         }
 
-        // Preparar el objeto para enviar al backend
+        // Preparar datos para el backend
         const transferData = {
             tipoTransferencia: transferDetails.tipoTransferencia,
             motivo: transferDetails.motivo,
             nombreDestinatario: transferDetails.nombreDestinatario,
             bancoDestino: transferDetails.bancoDestino,
-            cuentaDestinatario: transferDetails.cbuAlias, // El CBU/Alias ingresado
-            cuentaOrigen: transferDetails.cuentaOrigen, // ID de la cuenta seleccionada
-            monto: numericAmount, // Convertir a número
+            cuentaDestinatario: transferDetails.cbuAlias,
+            cuentaOrigen: transferDetails.cuentaOrigen,
+            monto: parseFloat(transferDetails.monto),
             estado: true
         };
 
-        console.log('Datos de transferencia:', transferData);
-
         try {
-            // Obtener la primera tarjeta asociada a la cuenta (o null si no hay)
-            const account = accounts.find(acc => acc.idCuenta === transferDetails.cuentaOrigen);
-            const tarjeta = account?.tarjetasDto?.[0];
+            // Obtener la primera tarjeta asociada a la cuenta
+            // const account = activeAccounts.find(acc => acc.idCuenta === parseInt(transferDetails.cuentaOrigen));
+            // const tarjeta = account?.tarjetasDto?.[0];
 
-            if (!tarjeta) {
-                throw new Error("No hay tarjetas disponibles para esta cuenta");
-            }
+            // if (!tarjeta) {
+            //     throw new Error("No hay tarjetas disponibles para esta cuenta");
+            // }
 
-            // Usar addTransactionToCard con el ID de la tarjeta y los datos de transferencia
-            await addTransactionToCard(tarjeta.idTarjeta, transferData);
+            // await createTransaction(tarjeta.idTarjeta, transferData);
+
+            await createTransaction(parseInt(transferDetails.tarjetaOrigen), transferData);
 
             setLocalMessage({ type: 'success', text: '¡Transferencia realizada con éxito!' });
 
             // Limpiar el formulario
-            setTransferDetails({
-                tipoTransferencia: 'debito',
-                motivo: '',
-                nombreDestinatario: '',
-                bancoDestino: '',
-                cbuAlias: '',
-                cuentaOrigen: '',
-                monto: '',
-                estado: true
-            });
+            setTransferDetails(INITIAL_TRANSFER_STATE);
 
         } catch (error) {
             console.error('Error al realizar la transferencia:', error);
@@ -133,8 +159,6 @@ const Transfer = () => {
                 type: 'error',
                 text: 'Error al realizar la transferencia: ' + (error.message || 'Inténtalo de nuevo')
             });
-        } finally {
-            setIsSending(false);
         }
     };
 
@@ -147,11 +171,23 @@ const Transfer = () => {
                     Realizar Transferencia
                 </h2>
 
-                <div className="text-lg text-center mb-6 py-3 px-4 rounded-lg bg-gray-700">
+                {/* <div className="text-lg text-center mb-6 py-3 px-4 rounded-lg bg-gray-700">
                     <p className="font-semibold">
                         Saldo Disponible: <span className="text-green-400">${availableBalance.toFixed(2)}</span>
                         {selectedAccount && ` (${selectedAccount.moneda})`}
                     </p>
+                </div> */}
+
+                {/* Mostrar saldo disponible */}
+                <div className="text-lg text-center mb-6 py-3 px-4 rounded-lg bg-gray-700">
+                    <p className="font-semibold">
+                        Saldo Disponible:
+                        <span className={`ml-2 ${selectedAccount ? 'text-green-400' : 'text-gray-400'}`}>
+                            ${availableBalance.toFixed(2)}
+                        </span>
+                        {selectedAccount && (<span className="text-gray-300 ml-1">({selectedAccount.moneda})</span>)}
+                    </p>
+                    {!selectedAccount && (<p className="text-sm text-gray-400 mt-1">Selecciona una cuenta para ver el saldo</p>)}
                 </div>
 
                 <form onSubmit={handleSubmitTransfer} className="space-y-6">
@@ -177,23 +213,45 @@ const Transfer = () => {
                         </select>
                     </div>
 
-                    {/* Tipo de transferencia */}
+                    {/* Selector de Tarjeta */}
                     <div>
-                        <label htmlFor="tipoTransferencia" className="block text-lg font-medium mb-2 text-gray-300">
-                            Tipo de transferencia
+                        <label htmlFor="tarjetaOrigen" className="block text-lg font-medium mb-2 text-gray-300">
+                            <IoCard className="inline mr-2" />
+                            Tarjeta de Origen
                         </label>
                         <select
-                            id="tipoTransferencia"
-                            name="tipoTransferencia"
-                            value={transferDetails.tipoTransferencia}
+                            id="tarjetaOrigen"
+                            name="tarjetaOrigen"
+                            value={transferDetails.tarjetaOrigen}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                            disabled={!selectedAccount || availableCards.length === 0}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white ${!selectedAccount || availableCards.length === 0
+                                ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                                : 'bg-gray-700'
+                                }`}
                             required
                         >
-                            <option value="debito">Débito</option>
-                            <option value="credito">Crédito</option>
+                            <option value="">
+                                {!selectedAccount
+                                    ? 'Primero selecciona una cuenta...'
+                                    : availableCards.length === 0
+                                        ? 'No hay tarjetas disponibles'
+                                        : 'Selecciona una tarjeta...'
+                                }
+                            </option>
+                            {availableCards.map(card => (
+                                <option key={card.idTarjeta} value={card.idTarjeta}>
+                                    {`${card.marca} - **** ${card.numeroTarjeta?.slice(-4)} (${card.tipo})`}
+                                </option>
+                            ))}
                         </select>
+                        {selectedAccount && availableCards.length === 0 && (
+                            <p className="text-sm text-red-400 mt-2">
+                                Esta cuenta no tiene tarjetas activas asociadas.
+                            </p>
+                        )}
                     </div>
+
 
                     {/* Nombre del destinatario */}
                     <div>
@@ -246,34 +304,6 @@ const Transfer = () => {
                         />
                     </div>
 
-                    {/* Selector de Tarjeta de Origen */}
-                    {/* <div>
-                        <label htmlFor="sourceCardId" className="block text-lg font-medium mb-2 text-gray-300">
-                            Seleccionar Tarjeta de Origen
-                        </label>
-                        <select
-                            id="sourceCardId"
-                            name="sourceCardId"
-                            value={transferDetails.sourceCardId}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            required
-                        >
-                            <option value="">Selecciona una tarjeta...</option>
-                            {allCards.map(card => (
-                                <option key={card.id} value={card.id}>
-                                 
-                                    {`${card.banco} - ${card.tipo} <span class="math-inline">\{card\.numero\.slice\(\-4\)\} \(</span>{card.marca || 'N/A'}) (Cuenta ${card.accountMoneda})`}
-                                </option>
-                            ))}
-                        </select>
-                        {allCards.length === 0 && (
-                            <p className="text-sm text-gray-500 mt-2 text-red-400">
-                                No se encontraron tarjetas asociadas a tus cuentas.
-                            </p>
-                        )}
-                    </div> */}
-
                     {/* Campo Monto */}
                     <div>
                         <label htmlFor="monto" className="block text-lg font-medium mb-2 text-gray-300">
@@ -289,8 +319,14 @@ const Transfer = () => {
                             placeholder="Ej: 5000.00"
                             step="0.01"
                             min="0.01"
+                            max={availableBalance}
                             required
                         />
+                        {selectedAccount && (
+                            <p className="text-sm text-gray-400 mt-1">
+                                Máximo disponible: ${availableBalance.toFixed(2)}
+                            </p>
+                        )}
                     </div>
 
                     {/* Campo Motivo / Descripción */}
@@ -322,14 +358,26 @@ const Transfer = () => {
                     {/* Botón Realizar Transferencia */}
                     <button
                         type="submit"
-                        className={`w-full bg-[linear-gradient(to_right,_#FF9A9E,_#F6416C)] hover:opacity-90 text-[#2D3748] font-semibold py-3 rounded-lg transition-all duration-300 hover:scale-105 shadow-md flex items-center justify-center gap-2 mt-8
-                                    ${isSending ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        disabled={isSending}
+                        disabled={!canTransfer || isLoading}
+                        className={`w-full font-semibold py-3 rounded-lg transition-all duration-300 shadow-md flex items-center justify-center gap-2 mt-8 ${canTransfer && !isLoading
+                            ? 'bg-[linear-gradient(to_right,_#FF9A9E,_#F6416C)] hover:opacity-90 hover:scale-105 text-[#2D3748]'
+                            : 'bg-gray-600 cursor-not-allowed opacity-50 text-gray-300'
+                            }`}
                     >
-                        {isSending ? (
+                        {isLoading ? (
                             <>
-                                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#2D3748]"></span>
+                                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-300"></span>
                                 Enviando...
+                            </>
+                        ) : !canTransfer ? (
+                            <>
+                                <IoWarning className="text-[1.3rem]" />
+                                {!selectedAccount
+                                    ? 'Selecciona una cuenta'
+                                    : availableCards.length === 0
+                                        ? 'No hay tarjetas disponibles'
+                                        : 'Selecciona una tarjeta'
+                                }
                             </>
                         ) : (
                             <>
@@ -343,5 +391,3 @@ const Transfer = () => {
         </div>
     );
 };
-
-export default Transfer;

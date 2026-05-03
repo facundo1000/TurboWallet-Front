@@ -1,21 +1,24 @@
+/* eslint-disable no-unused-vars */
 import { useState } from 'react';
 import { FaCcMastercard, FaCcVisa, FaCreditCard } from 'react-icons/fa';
 import { MdDeleteForever } from "react-icons/md";
 import Swal from 'sweetalert2';
 import { AddCardForm } from '../components/AddCardForm';
 import { Modal } from '../components/Modal';
-import { useAccountStore } from '../hooks/useAccountStore';
+import { useCardStore } from '../hooks/useCardStore';
 
 export const Cards = () => {
-
-  const { accounts, addCardToAccountFn, deleteCardFromAccount } = useAccountStore();
-
-  const tarjetas = accounts
-    .flatMap(account => account.tarjetasDto
-      .filter(t => t.estado === true) || []);
-
+  // Obtener las tarjetas y funciones del store
+  const {
+    cards,
+    isLoading,
+    activeCard,
+    addCardToAccount,
+    deleteCard,
+  } = useCardStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   const getCardStyles = (tipo) => {
     switch (tipo) {
@@ -70,7 +73,7 @@ export const Cards = () => {
       });
 
       if (result.isConfirmed) {
-        await deleteCardFromAccount(tarjeta.idTarjeta);
+        await deleteCard(tarjeta.idTarjeta);
         Swal.fire('Eliminada', 'La tarjeta ha sido eliminada.', 'success');
       }
     } catch (error) {
@@ -98,7 +101,8 @@ export const Cards = () => {
         fechaVencimiento,
       };
 
-      await addCardToAccountFn(accountId, newCard);
+      // await addCardToAccountFn(accountId, newCard);
+      await addCardToAccount(accountId, newCard); // Actualizar el estado local
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error al agregar tarjeta:", error);
@@ -106,9 +110,10 @@ export const Cards = () => {
     }
   };
 
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-visible">
-      {tarjetas.map((tarjeta, idx) => (
+      {cards.map((tarjeta, idx) => (
         <div
           key={idx}
           className={`${getCardStyles(tarjeta.marca)} text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-[1.03] duration-200 relative group`} // AGREGAR: 'relative' para posicionar el botón de eliminar

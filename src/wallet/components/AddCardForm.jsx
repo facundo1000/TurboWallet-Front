@@ -58,6 +58,7 @@ export const AddCardForm = ({ onAddCard }) => {
         <label htmlFor="accountId" className="block text-sm font-medium text-gray-700">
           Cuenta asociada
         </label>
+        {/* Account selector */}
         <select
           id="accountId"
           name="accountId"
@@ -75,6 +76,7 @@ export const AddCardForm = ({ onAddCard }) => {
         </select>
       </div>
 
+      {/* Card number input */}
       <div>
         <label htmlFor="numeroTarjeta" className="block text-sm font-medium text-gray-700">
           Número de Tarjeta
